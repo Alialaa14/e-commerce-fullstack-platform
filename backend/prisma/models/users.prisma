@@ -1,0 +1,38 @@
+// enum Role {
+//     user
+//     brand
+//     admin
+//     delievryC
+//     courier
+// }
+
+// enum otpPurpose {
+//     resetpassword
+//     signup
+// }
+
+// model User {
+//     id                  String      @id @default(uuid())
+//     username            String
+//     phone               String?     @unique
+//     email               String      @unique
+//     role                Role        @default(user)
+//     password            String
+//     picture_url         String?
+//     picture_url_id      String?
+//     otp                 String?
+//     otp_expiration      DateTime?
+//     otp_purpose         otpPurpose?
+//     isBanned            Boolean     @default(false)
+//     refreshToken        String?
+//     created_At          DateTime    @default(now())
+//     updated_At          DateTime    @default(now())
+//     // cart Cart
+//     //wishlist Wishlist
+//     //orders Order[]
+//     payment_id          String?
+//     passwordChangedAt   DateTime?
+//     failedLoginAttempts Int         @default(0)
+//     lockedUntil         DateTime?
+//     isOnline            Boolean     @default(false)
+// }

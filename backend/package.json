@@ -1,0 +1,61 @@
+{
+  "name": "threadmarket",
+  "version": "1.0.0",
+  "description": "ThreadMarket - Multi-vendor clothing marketplace (Modular Monolith)",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "node init && tsc",
+    "start": "node init && node dist/server.js",
+    "dev": "node init && ts-node src/server.ts",
+    "dev:watch": "node init && nodemon --exec ts-node src/server.ts",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "push": "prisma db push",
+    "pull": "prisma db pull"
+  },
+  "prisma": {
+    "seed": "ts-node src/helpers/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "amqplib": "^0.10.4",
+    "axios": "^1.19.0",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^8.0.0",
+    "http-status-codes": "^2.3.0",
+    "ioredis": "^5.4.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^6.10.0",
+    "mongoose": "^9.6.3",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nanoid": "^6.0.0",
+    "nodemailer": "^6.10.1",
+    "pg": "^8.13.0",
+    "prisma": "^7.8.0",
+    "redis": "^4.7.0",
+    "socket.io": "^4.8.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.5",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^26.1.1",
+    "@types/nodemailer": "^6.4.16",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

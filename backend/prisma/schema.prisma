@@ -1,0 +1,362 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  user
+  brand
+  admin
+  delievryC
+  courier
+}
+
+enum otpPurpose {
+  resetpassword
+  signup
+}
+
+enum orderStatus {
+  pending
+  accepted
+  rejected
+  packing
+  shipping
+  delivering
+  delivered
+  returned
+}
+
+model User {
+  id             String      @id @unique @default(uuid()) @db.Uuid
+  username       String
+  phone          String?     @unique
+  email          String      @unique
+  role           Role        @default(user)
+  password       String
+  picture_url    String?
+  picture_url_id String?
+  otp            String?
+  otp_expiration DateTime?
+  otp_purpose    otpPurpose?
+  isVerified     Boolean     @default(false)
+  isBanned       Boolean     @default(false)
+  refreshToken   String?
+  created_At     DateTime    @default(now())
+  updated_At     DateTime    @default(now())
+  cart           Cart?
+  wishlist       wishlist?
+  orders         Order[]
+
+  brand               Brand?
+  reviewedBrandDocs   BrandDocument[] @relation("BrandDocumentReviewer")
+  payment_id          String?
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int             @default(0)
+  lockedUntil         DateTime?
+  isOnline            Boolean         @default(false)
+  brandDocumentId     String?         @db.Uuid
+  brandFollowers      BrandFollower[]
+  reviews             Review[]
+  wishlistUserId      String?         @db.Uuid
+}
+
+model Brand {
+  id                 String                @id @default(uuid()) @db.Uuid
+  userId             String                @unique @map("user_id") @db.Uuid
+  name               String                @map("brand_name")
+  //ownerNationalId    String?                @map("owner_national_id")  We Could Decide Later to use it 
+  // bankIban           String?                @map("bank_iban")         We Could Decide Later to use it  
+  verificationStatus BrandVerificationTier @default(pending) @map("verification_status")
+  rating             Decimal               @default(0) @db.Decimal(2, 1)
+  logoUrl            String?               @map("logo_url")
+  logoUrl_id         String?               @map("logo_url_id")
+  followersCount     Int                   @default(0) @map("followers_count")
+  viewedTimes        Int                   @default(0) @map("viewed_times")
+  isPromoted         Boolean               @default(false) @map("is_promoted")
+  isActive           Boolean               @default(true) @map("is_active")
+  balance            Decimal               @default(0) @db.Decimal(12, 2)
+  paymentDetails     Json?                 @map("payment_details")
+  /**
+   * {
+   * "method": "bank_transfer",
+   * "verified": false,
+   * "updatedAt": "2026-07-19T10:00:00Z",
+   * "details": {
+   * "bankIban": "DE89370400440532013000",
+   * "bankBic": "COBADEFFXXX",
+   * "accountHolderName": "Acme Brand LLC"
+   * }
+   * details will be flexiable based on payment gateway
+   * }
+   */
+  createdAt          DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime              @default(now()) @map("updated_at") @db.Timestamptz
+
+  user        User              @relation(fields: [userId], references: [id])
+  documents   BrandDocument[]
+  socialLinks BrandSocialLink[]
+  followers   BrandFollower[]
+  products    Product[]
+  branches    BrandBranch[]
+  // reviews            Review[]
+  // chatThreads        ChatThread[]
+  // adCampaigns        AdCampaign[]
+  // rankingScore       RankingScore?
+  orderBrands OrderBrand[]
+
+  @@map("brands")
+}
+
+model BrandBranch {
+  id      String  @id @default(uuid()) @db.Uuid
+  brandId String  @map("brand_id") @db.Uuid
+  name    String? @map("branch_name") // e.g. "Downtown Branch" — nullable, single-location brands may not need one
+
+  latitude            Decimal? @db.Decimal(9, 6)
+  longitude           Decimal? @db.Decimal(9, 6)
+  placeId             String?  @map("place_id")
+  formattedAddress    String?  @map("formatted_address")
+  addressLine         String?  @map("address_line")
+  city                String?
+  state               String?
+  country             String?
+  postalCode          String?  @map("postal_code")
+  locationGranularity String?  @map("location_granularity") // ROOFTOP, GEOMETRIC_CENTER, APPROXIMATE, etc.
+
+  isMain   Boolean @default(false) @map("is_main")
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@index([brandId])
+  @@map("brand_branches")
+}
+
+enum BrandVerificationTier {
+  pending
+  basic_verification // When creating at least 10 products 
+  full_verification // When Verifying his identity
+  suspended
+
+  @@map("brand_verification_tier")
+}
+
+enum BrandDocType {
+  trademark_certificate
+  business_registration
+  representative_id
+  proof_of_address
+  shop_photo
+  product_packaging
+  social_platform
+  website
+  invoice_sample
+}
+
+enum courierDocuments {
+  nationalId
+  drivingLicense
+  vehicleRegistration
+  plateNumber
+}
+
+enum BrandDocRejectionReason {
+  illegible
+  expired
+  name_mismatch
+  wrong_doc_type
+  incomplete
+  unsupported_format
+  suspected_fraud
+  other
+
+  @@map("brand_doc_rejection_reason")
+}
+
+model BrandDocument {
+  id              String                   @id @default(uuid()) @map("document_id") @db.Uuid
+  brandId         String                   @map("brand_id") @db.Uuid
+  docType         BrandDocType             @map("doc_type")
+  fileUrl         String                   @map("file_url")
+  fileUrl_id      String                   @map("file_url_id")
+  reviewedBy      String?                  @map("reviewed_by") @db.Uuid
+  reviewedAt      DateTime?                @map("reviewed_at") @db.Timestamptz
+  status          String                   @default("pending") @db.VarChar(20)
+  createdAt       DateTime                 @default(now()) @map("created_at") @db.Timestamptz
+  rejectionReason BrandDocRejectionReason?
+  brand           Brand                    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  reviewer        User?                    @relation("BrandDocumentReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("brand_documents")
+}
+
+model BrandSocialLink {
+  brandId  String @map("brand_id") @db.Uuid
+  platform String @db.VarChar(30)
+  url      String
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@id([brandId, platform])
+  @@map("brand_social_links")
+}
+
+model BrandFollower {
+  brandId    String   @map("brand_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  followedAt DateTime @default(now()) @map("followed_at") @db.Timestamptz
+
+  brand Brand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([brandId, userId])
+  @@map("brand_followers")
+}
+
+model Product {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  media          Json[]
+  description    String
+  brandId        String    @map("brand_id") @db.Uuid
+  categoryId     String    @map("category_id") @db.Uuid
+  price          Decimal   @db.Decimal(10, 2)
+  discount       Int?      @default(0)
+  viewCount      Int       @default(0) @map("view_count")
+  rating         Decimal   @default(0) @db.Decimal(2, 1)
+  available      Boolean   @default(true)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  brand          Brand     @relation(fields: [brandId], references: [id])
+  category       Category  @relation(fields: [categoryId], references: [id])
+  reviews        Review[]
+  variants       Variant[]
+  wishlist       wishlist? @relation(fields: [wishlistUserId], references: [userId])
+  wishlistUserId String?   @db.Uuid
+
+  @@map("products")
+}
+
+model Variant {
+  id           String  @id @default(uuid()) @db.Uuid
+  productId    String  @map("product_id") @db.Uuid
+  color        String
+  size         String
+  stock        Int     @default(0)
+  sold         Int     @default(0)
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cart         Cart    @relation(fields: [cartId], references: [id])
+  cartId       String  @unique @db.Uuid
+  order        Order?  @relation(fields: [orderOrderId], references: [orderId])
+  orderOrderId String? @db.Uuid
+
+  @@unique([productId, color, size])
+  @@map("variants")
+}
+
+model Category {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique @map("category_name")
+  description String
+  media       Json
+  ishidden    Boolean   @default(false)
+  Products    Product[]
+  createdAt   DateTime  @default(now())
+  updateAt    DateTime  @default(now())
+}
+
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  product   Product? @relation(fields: [productId], references: [id])
+  productId String?  @db.Uuid
+  content   String
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Cart {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @unique @db.Uuid
+  user         User      @relation(fields: [userId], references: [id])
+  products     Variant[]
+  discount     Int?
+  cartNote     String?
+  userLocation String
+  userNumber   String
+  price        Int
+  totalPrice   Int
+}
+
+model wishlist {
+  userId   String    @id @unique @db.Uuid
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+}
+
+model Order {
+  orderId         String       @id @default(uuid()) @db.Uuid
+  userId          String       @db.Uuid
+  user            User         @relation(fields: [userId], references: [id])
+  brands          OrderBrand[]
+  products        Variant[]
+  discount        Int?
+  status          orderStatus  @default(pending)
+  otp             String
+  price           Int
+  totalPrice      Int
+  address         String
+  phoneNumber     String
+  deliveryCId     String       @unique @db.Uuid
+  deliveryCompany D_Company    @relation(fields: [deliveryCId], references: [deliveryCompany])
+  courier         Courier?     @relation(fields: [courierId], references: [id])
+  courierId       String?      @db.Uuid
+}
+
+// This model for one to many relation that fit splitting the Order into many brands
+model OrderBrand {
+  orderId String @db.Uuid
+  brandId String @db.Uuid
+  order   Order  @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, brandId])
+}
+
+model D_Company {
+  deliveryCompany String    @id @default(uuid()) @db.Uuid
+  name            String
+  address         String
+  phoneNumber     String
+  isVerified      Boolean   @default(false)
+  isBanned        Boolean   @default(false)
+  couriers        Courier[]
+  orders          Order[]
+  balance         Int
+}
+
+model Courier {
+  id              String             @id @default(uuid()) @db.Uuid
+  photo_url       String
+  photo_id        String
+  phoneNumber     String
+  documents       courierDocuments[]
+  plateNumber     String
+  isVerified      Boolean            @default(false)
+  isBanned        Boolean            @default(false)
+  orders          Order[]
+  delieveryCId    String             @unique @db.Uuid
+  deliveryCompany D_Company          @relation(fields: [delieveryCId], references: [deliveryCompany])
+}
